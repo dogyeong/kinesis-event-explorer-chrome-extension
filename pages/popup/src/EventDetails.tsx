@@ -16,7 +16,7 @@ export const EventDetails = ({ event }: EventDetailsProps) => {
     <div className="px-[16px] py-[24px] text-center text-zinc-100">
       <div className="flex items-center gap-x-[16px] mb-[24px]">
         <h3 className="text-[20px] font-bold flex-1">{event.data.event.amplitude.event_type}</h3>
-        <label className="flex items-center gap-x-[4px] shrink-0 text-[14px] text-zinc-400">
+        <label className="flex items-center gap-x-[4px] shrink-0 text-[14px] text-zinc-400 cursor-pointer">
           원본 JSON
           <input type="checkbox" checked={showRawJSON} onChange={e => setShowRawJSON(e.target.checked)} />
         </label>

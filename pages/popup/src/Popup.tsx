@@ -1,5 +1,6 @@
 import '@src/Popup.css';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
+import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
 import { Events } from '@src/Events';
 import { EventDetails } from '@src/EventDetails';
@@ -73,8 +74,8 @@ const Popup = () => {
 
   return (
     <div className="absolute inset-0 text-center h-full w-full bg-zinc-900 grid grid-cols-1 grid-rows-[48px_552px]">
-      <header className="text-zinc-100 border-b-[0.5px] border-b-zinc-600">
-        <p>{eventLogs.map(({ date }) => date.toLocaleDateString())}</p>
+      <header className="text-zinc-100 border-b-[0.5px] border-b-zinc-600 flex items-center px-[16px]">
+        <Button onClick={() => setEventLogs([])}>초기화</Button>
       </header>
       <main className="w-full grid grid-cols-[3fr_4fr] flex-1">
         <section className="border-r-[0.5px] border-r-zinc-600 overflow-y-auto overflow-x-hidden">
@@ -87,6 +88,17 @@ const Popup = () => {
     </div>
   );
 };
+
+function Button({ children, onClick }: PropsWithChildren<{ onClick: VoidFunction }>) {
+  return (
+    <button
+      type="button"
+      className="px-[12px] py-[4px] border-[0.5px] border-zinc-600 rounded-[4px] hover:bg-zinc-800 transition-[background-color] active:bg-zinc-700"
+      onClick={onClick}>
+      {children}
+    </button>
+  );
+}
 
 export default withErrorBoundary(withSuspense(Popup, <div> Loading ... </div>), <div> Error Occur </div>);
 
