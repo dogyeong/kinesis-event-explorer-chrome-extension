@@ -1,15 +1,17 @@
 import '@src/Popup.css';
-import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { exampleThemeStorage } from '@extension/storage';
-import { useEffect, useState, type ComponentPropsWithoutRef } from 'react';
+import { withErrorBoundary, withSuspense } from '@extension/shared';
+import { useEffect, useState } from 'react';
+import { Events } from '@src/Events';
 
-interface EventLog {
-  createdAt: Date;
+export interface EventLog {
+  id: string;
+  date: Date;
   data: Record<string, unknown>;
 }
 
 const Popup = () => {
   const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (details: chrome.webRequest.WebRequestBodyDetails) => {
@@ -30,34 +32,17 @@ const Popup = () => {
   }, []);
 
   return (
-    <div className={`App bg-gray-800`}>
-      <header className={`App-header text-gray-100`}>
-        <p>
-          Edit <code>pages/popup/src/Popup.tsx</code>
-        </p>
-        <p>{eventLogs.map(({ createdAt }) => createdAt.toLocaleDateString())}</p>
-        <button className={'font-bold mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white'}>
-          Click to inject Content Script
-        </button>
-        <ToggleButton>Toggle theme</ToggleButton>
+    <div className="absolute inset-0 text-center h-full w-full bg-zinc-900 grid grid-cols-1 grid-rows-[48px_552px]">
+      <header className="text-zinc-100 border-b-[0.5px] border-b-zinc-600">
+        <p>{eventLogs.map(({ date }) => date.toLocaleDateString())}</p>
       </header>
+      <main className="w-full grid grid-cols-2 flex-1">
+        <section className="border-r-[0.5px] border-r-zinc-600 text-zinc-100 overflow-y-auto overflow-x-hidden min-h-0">
+          <Events events={eventLogs} selectedEventId={selectedEventId} onClickEvent={setSelectedEventId} />
+        </section>
+        <section className="text-zinc-100">세부 정보를 확인하려면 이벤트를 클릭하세요.</section>
+      </main>
     </div>
-  );
-};
-
-const ToggleButton = (props: ComponentPropsWithoutRef<'button'>) => {
-  const theme = useStorage(exampleThemeStorage);
-  return (
-    <button
-      className={
-        props.className +
-        ' ' +
-        'font-bold mt-4 py-1 px-4 rounded shadow hover:scale-105 ' +
-        (theme === 'light' ? 'bg-white text-black shadow-black' : 'bg-black text-white')
-      }
-      onClick={exampleThemeStorage.toggle}>
-      {props.children}
-    </button>
   );
 };
 
@@ -73,11 +58,14 @@ function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDet
 
     const textDecoder = new TextDecoder();
     const decodedString = textDecoder.decode(arrayBuffer);
-    const jsonObject = JSON.parse(decodedString);
+    const kinesisJson = JSON.parse(decodedString) as { Data: string; PartitionKey: string; StreamName: string };
+    const eventJson = JSON.parse(window.atob(kinesisJson.Data));
+    eventJson.event = JSON.parse(eventJson.event);
 
     return {
-      createdAt: new Date(),
-      data: jsonObject,
+      id: eventJson.eventId,
+      date: new Date(eventJson.date),
+      data: eventJson,
     };
   }
   return null;
