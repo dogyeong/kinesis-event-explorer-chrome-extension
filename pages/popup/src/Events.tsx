@@ -22,7 +22,7 @@ export const Events = ({ events, onClickEvent, selectedEventId }: EventsProps) =
               className={
                 'p-[16px] cursor-pointer flex gap-x-[12px] items-center w-full' +
                 ' ' +
-                (selectedEventId === id ? 'bg-zinc-700' : '')
+                (selectedEventId === id ? 'bg-zinc-700' : 'hover:bg-zinc-800 transition-[background-color]')
               }
               onClick={() => onClickEvent(id)}>
               <time dateTime={new Date(date).toLocaleDateString()} className="text-zinc-400 shrink-0 text-[12px]">
