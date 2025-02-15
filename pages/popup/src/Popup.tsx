@@ -44,7 +44,7 @@ export interface RawEvent {
 
 export interface EventLog {
   id: string;
-  date: Date;
+  date: number;
   data: RawEvent;
 }
 
@@ -55,27 +55,32 @@ const Popup = () => {
   const selectedEvent = eventLogs.find(({ id }) => id === selectedEventId) ?? null;
 
   useEffect(() => {
-    const handler = (details: chrome.webRequest.WebRequestBodyDetails) => {
-      const eventLog = getEventLogFromRequestBody(details);
+    chrome.runtime.sendMessage({ type: 'GET_EVENTS' }, (response: RawEvent[]) => {
+      setEventLogs(response.map(event => ({ id: event.eventId, date: event.date, data: event })));
+    });
+  }, []);
 
-      if (eventLog) {
-        setEventLogs(prev => [...prev, eventLog]);
+  useEffect(() => {
+    const handler = (message: { type: string; events: RawEvent[] }) => {
+      if (message?.type === 'UPDATE_EVENTS') {
+        setEventLogs(message.events.map(event => ({ id: event.eventId, date: event.date, data: event })));
       }
     };
+    chrome.runtime.onMessage.addListener(handler);
 
-    chrome.webRequest.onBeforeRequest.addListener(
-      handler,
-      { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'] },
-      ['requestBody'],
-    );
-
-    return () => chrome.webRequest.onBeforeRequest.removeListener(handler);
+    return () => {
+      chrome.runtime.onMessage.removeListener(handler);
+    };
   }, []);
+
+  function clearEvents() {
+    chrome.runtime.sendMessage({ type: 'CLEAR_EVENTS' });
+  }
 
   return (
     <div className="absolute inset-0 text-center h-full w-full bg-zinc-900 grid grid-cols-1 grid-rows-[48px_552px]">
       <header className="text-zinc-100 border-b-[0.5px] border-b-zinc-600 flex items-center px-[16px]">
-        <Button onClick={() => setEventLogs([])}>초기화</Button>
+        <Button onClick={clearEvents}>초기화</Button>
       </header>
       <main className="w-full grid grid-cols-[3fr_4fr] flex-1">
         <section className="border-r-[0.5px] border-r-zinc-600 overflow-y-auto overflow-x-hidden">
@@ -101,27 +106,3 @@ function Button({ children, onClick }: PropsWithChildren<{ onClick: VoidFunction
 }
 
 export default withErrorBoundary(withSuspense(Popup, <div> Loading ... </div>), <div> Error Occur </div>);
-
-function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDetails): EventLog | null {
-  if (details.method === 'POST' && details.requestBody) {
-    const arrayBuffer = details.requestBody.raw?.[0]?.bytes;
-
-    if (!arrayBuffer) {
-      return null;
-    }
-
-    const textDecoder = new TextDecoder();
-    const decodedString = textDecoder.decode(arrayBuffer);
-    const kinesisJson = JSON.parse(decodedString) as { Data: string; PartitionKey: string; StreamName: string };
-    const eventJson: RawEvent = JSON.parse(window.atob(kinesisJson.Data));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    eventJson.event = JSON.parse(eventJson.event as any) as RawEvent['event'];
-
-    return {
-      id: eventJson.eventId,
-      date: new Date(eventJson.date),
-      data: eventJson,
-    };
-  }
-  return null;
-}
