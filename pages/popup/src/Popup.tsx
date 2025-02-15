@@ -2,16 +2,56 @@ import '@src/Popup.css';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { useEffect, useState } from 'react';
 import { Events } from '@src/Events';
+import { EventDetails } from '@src/EventDetails';
+
+export interface RawEvent {
+  date: number;
+  id: string | null;
+  clientId: string | null;
+  userId: string | null;
+  deviceId: string;
+  userIp: string;
+  url: string;
+  testGroupName: null;
+  pageId: string;
+  eventId: string;
+  prevPageId: string | null;
+  prevEventId: string | null;
+  previousEvent: string | null;
+  event: {
+    type: string;
+    index: number;
+    amplitude: {
+      project: string;
+      ip: string;
+      event_type: string;
+      user_id: string | null;
+      device_id: string;
+      time: string;
+      url: string;
+      event_properties: Record<string, unknown>;
+      user_properties: Record<string, unknown>;
+      user_agent: string;
+      os_name: string;
+      os_version: string;
+      device_manufacturer: string;
+      device_model: string;
+      platform: string;
+    };
+  };
+}
 
 export interface EventLog {
   id: string;
   date: Date;
-  data: Record<string, unknown>;
+  data: RawEvent;
 }
 
 const Popup = () => {
   const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const selectedEvent = eventLogs.find(({ id }) => id === selectedEventId) ?? null;
 
   useEffect(() => {
     const handler = (details: chrome.webRequest.WebRequestBodyDetails) => {
@@ -36,11 +76,13 @@ const Popup = () => {
       <header className="text-zinc-100 border-b-[0.5px] border-b-zinc-600">
         <p>{eventLogs.map(({ date }) => date.toLocaleDateString())}</p>
       </header>
-      <main className="w-full grid grid-cols-2 flex-1">
-        <section className="border-r-[0.5px] border-r-zinc-600 text-zinc-100 overflow-y-auto overflow-x-hidden min-h-0">
+      <main className="w-full grid grid-cols-[3fr_4fr] flex-1">
+        <section className="border-r-[0.5px] border-r-zinc-600 overflow-y-auto overflow-x-hidden">
           <Events events={eventLogs} selectedEventId={selectedEventId} onClickEvent={setSelectedEventId} />
         </section>
-        <section className="text-zinc-100">세부 정보를 확인하려면 이벤트를 클릭하세요.</section>
+        <section className="overflow-y-auto overflow-x-hidden">
+          <EventDetails event={selectedEvent} />
+        </section>
       </main>
     </div>
   );
@@ -59,8 +101,9 @@ function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDet
     const textDecoder = new TextDecoder();
     const decodedString = textDecoder.decode(arrayBuffer);
     const kinesisJson = JSON.parse(decodedString) as { Data: string; PartitionKey: string; StreamName: string };
-    const eventJson = JSON.parse(window.atob(kinesisJson.Data));
-    eventJson.event = JSON.parse(eventJson.event);
+    const eventJson: RawEvent = JSON.parse(window.atob(kinesisJson.Data));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    eventJson.event = JSON.parse(eventJson.event as any) as RawEvent['event'];
 
     return {
       id: eventJson.eventId,
