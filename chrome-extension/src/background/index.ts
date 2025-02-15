@@ -2,6 +2,7 @@ import 'webextension-polyfill';
 
 const events: unknown[] = [];
 
+// kinesis로 이벤트가 전송될 때마다 가로채서 이벤트를 추출한다.
 chrome.webRequest.onBeforeRequest.addListener(
   details => {
     const event = getEventLogFromRequestBody(details);
@@ -15,12 +16,14 @@ chrome.webRequest.onBeforeRequest.addListener(
   ['requestBody'],
 );
 
+// 팝업에서 이벤트를 조회
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'GET_EVENTS') {
     sendResponse(events);
   }
 });
 
+// 팝업에서 이벤트 로그를 초기화
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === 'CLEAR_EVENTS') {
     events.length = 0;

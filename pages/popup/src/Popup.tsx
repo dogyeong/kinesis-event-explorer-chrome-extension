@@ -49,21 +49,23 @@ export interface EventLog {
 }
 
 const Popup = () => {
-  const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
+  const [events, setEvents] = useState<EventLog[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  const selectedEvent = eventLogs.find(({ id }) => id === selectedEventId) ?? null;
+  const selectedEvent = events.find(({ id }) => id === selectedEventId) ?? null;
 
+  // 팝업이 열리면 이벤트 로그를 가져온다.
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'GET_EVENTS' }, (response: RawEvent[]) => {
-      setEventLogs(response.map(event => ({ id: event.eventId, date: event.date, data: event })));
+      setEvents(response.map(event => ({ id: event.eventId, date: event.date, data: event })));
     });
   }, []);
 
+  // 이벤트 로그가 업데이트되면 상태를 업데이트한다.
   useEffect(() => {
     const handler = (message: { type: string; events: RawEvent[] }) => {
       if (message?.type === 'UPDATE_EVENTS') {
-        setEventLogs(message.events.map(event => ({ id: event.eventId, date: event.date, data: event })));
+        setEvents(message.events.map(event => ({ id: event.eventId, date: event.date, data: event })));
       }
     };
     chrome.runtime.onMessage.addListener(handler);
@@ -73,6 +75,7 @@ const Popup = () => {
     };
   }, []);
 
+  // 이벤트 로그를 초기화한다.
   function clearEvents() {
     chrome.runtime.sendMessage({ type: 'CLEAR_EVENTS' });
   }
@@ -84,7 +87,7 @@ const Popup = () => {
       </header>
       <main className="w-full grid grid-cols-[3fr_4fr] flex-1">
         <section className="border-r-[0.5px] border-r-zinc-600 overflow-y-auto overflow-x-hidden">
-          <Events events={eventLogs} selectedEventId={selectedEventId} onClickEvent={setSelectedEventId} />
+          <Events events={events} selectedEventId={selectedEventId} onClickEvent={setSelectedEventId} />
         </section>
         <section className="overflow-y-auto overflow-x-hidden">
           <EventDetails event={selectedEvent} />
