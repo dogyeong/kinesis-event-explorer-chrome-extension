@@ -1,57 +1,42 @@
 import '@src/Popup.css';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
-import type { ComponentPropsWithoutRef } from 'react';
+import { useEffect, useState, type ComponentPropsWithoutRef } from 'react';
 
-const notificationOptions = {
-  type: 'basic',
-  iconUrl: chrome.runtime.getURL('icon-34.png'),
-  title: 'Injecting content script error',
-  message: 'You cannot inject script here!',
-} as const;
+interface EventLog {
+  createdAt: Date;
+  data: Record<string, unknown>;
+}
 
 const Popup = () => {
-  const theme = useStorage(exampleThemeStorage);
-  const isLight = theme === 'light';
-  const logo = isLight ? 'popup/logo_vertical.svg' : 'popup/logo_vertical_dark.svg';
-  const goGithubSite = () =>
-    chrome.tabs.create({ url: 'https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite' });
+  const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
 
-  const injectContentScript = async () => {
-    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+  useEffect(() => {
+    const handler = (details: chrome.webRequest.WebRequestBodyDetails) => {
+      const eventLog = getEventLogFromRequestBody(details);
 
-    if (tab.url!.startsWith('about:') || tab.url!.startsWith('chrome:')) {
-      chrome.notifications.create('inject-error', notificationOptions);
-    }
+      if (eventLog) {
+        setEventLogs(prev => [...prev, eventLog]);
+      }
+    };
 
-    await chrome.scripting
-      .executeScript({
-        target: { tabId: tab.id! },
-        files: ['/content-runtime/index.iife.js'],
-      })
-      .catch(err => {
-        // Handling errors related to other paths
-        if (err.message.includes('Cannot access a chrome:// URL')) {
-          chrome.notifications.create('inject-error', notificationOptions);
-        }
-      });
-  };
+    chrome.webRequest.onBeforeRequest.addListener(
+      handler,
+      { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'] },
+      ['requestBody'],
+    );
+
+    return () => chrome.webRequest.onBeforeRequest.removeListener(handler);
+  }, []);
 
   return (
-    <div className={`App ${isLight ? 'bg-slate-50' : 'bg-gray-800'}`}>
-      <header className={`App-header ${isLight ? 'text-gray-900' : 'text-gray-100'}`}>
-        <button onClick={goGithubSite}>
-          <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
-        </button>
+    <div className={`App bg-gray-800`}>
+      <header className={`App-header text-gray-100`}>
         <p>
           Edit <code>pages/popup/src/Popup.tsx</code>
         </p>
-        <button
-          className={
-            'font-bold mt-4 py-1 px-4 rounded shadow hover:scale-105 ' +
-            (isLight ? 'bg-blue-200 text-black' : 'bg-gray-700 text-white')
-          }
-          onClick={injectContentScript}>
+        <p>{eventLogs.map(({ createdAt }) => createdAt.toLocaleDateString())}</p>
+        <button className={'font-bold mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white'}>
           Click to inject Content Script
         </button>
         <ToggleButton>Toggle theme</ToggleButton>
@@ -77,3 +62,23 @@ const ToggleButton = (props: ComponentPropsWithoutRef<'button'>) => {
 };
 
 export default withErrorBoundary(withSuspense(Popup, <div> Loading ... </div>), <div> Error Occur </div>);
+
+function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDetails): EventLog | null {
+  if (details.method === 'POST' && details.requestBody) {
+    const arrayBuffer = details.requestBody.raw?.[0]?.bytes;
+
+    if (!arrayBuffer) {
+      return null;
+    }
+
+    const textDecoder = new TextDecoder();
+    const decodedString = textDecoder.decode(arrayBuffer);
+    const jsonObject = JSON.parse(decodedString);
+
+    return {
+      createdAt: new Date(),
+      data: jsonObject,
+    };
+  }
+  return null;
+}
