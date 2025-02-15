@@ -8,6 +8,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (event) {
       events.push(event);
       chrome.runtime.sendMessage({ type: 'UPDATE_EVENTS', events });
+      updateCountBadge();
     }
   },
   { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'] },
@@ -24,6 +25,7 @@ chrome.runtime.onMessage.addListener(message => {
   if (message?.type === 'CLEAR_EVENTS') {
     events.length = 0;
     chrome.runtime.sendMessage({ type: 'UPDATE_EVENTS', events });
+    updateCountBadge();
   }
 });
 
@@ -45,4 +47,12 @@ function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDet
     return rawEvent;
   }
   return null;
+}
+
+function updateCountBadge() {
+  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    if (tabs[0]) {
+      chrome.action.setBadgeText({ text: events.length > 0 ? String(events.length) : '', tabId: tabs[0].id });
+    }
+  });
 }
