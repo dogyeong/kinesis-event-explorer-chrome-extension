@@ -17,7 +17,7 @@ const manifest = {
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
-  permissions: ['webRequest'],
+  permissions: ['activeTab', 'webRequest'],
   background: {
     service_worker: 'background.iife.js',
     type: 'module',
