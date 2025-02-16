@@ -12,7 +12,7 @@ chrome.webRequest.onBeforeRequest.addListener(
       updateCountBadge();
     }
   },
-  { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'] },
+  { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'], types: ['xmlhttprequest'] },
   ['requestBody'],
 );
 
