@@ -12,7 +12,10 @@ chrome.webRequest.onBeforeRequest.addListener(
       updateCountBadge();
     }
   },
-  { urls: ['https://kinesis.ap-northeast-2.amazonaws.com/*'], types: ['xmlhttprequest'] },
+  {
+    urls: ['https://*.lfind.kr/*', 'https://lfind.kr/*', 'https://*.lbox.kr/*', 'https://lbox.kr/*'],
+    types: ['xmlhttprequest'],
+  },
   ['requestBody'],
 );
 
@@ -40,14 +43,28 @@ function getEventLogFromRequestBody(details: chrome.webRequest.WebRequestBodyDet
       return null;
     }
 
-    const textDecoder = new TextDecoder();
-    const decodedString = textDecoder.decode(arrayBuffer);
-    const kinesisJson = JSON.parse(decodedString) as { Data: string; PartitionKey: string; StreamName: string };
-    const rawEvent = JSON.parse(atob(kinesisJson.Data));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rawEvent.event = JSON.parse(rawEvent.event as any);
+    try {
+      const textDecoder = new TextDecoder();
+      const decodedString = textDecoder.decode(arrayBuffer);
+      const kinesisJson = JSON.parse(decodedString) as { deviceId: string; log: string; streamName: string };
 
-    return rawEvent;
+      // kinesisJson가 올바른 형식인지 확인
+      if (
+        !Object.hasOwn(kinesisJson, 'deviceId') ||
+        !Object.hasOwn(kinesisJson, 'log') ||
+        !Object.hasOwn(kinesisJson, 'streamName')
+      ) {
+        return null;
+      }
+
+      const rawEvent = JSON.parse(kinesisJson.log);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rawEvent.event = JSON.parse(rawEvent.event as any);
+
+      return rawEvent;
+    } catch {
+      return null;
+    }
   }
   return null;
 }

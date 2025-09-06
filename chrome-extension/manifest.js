@@ -16,7 +16,7 @@ const manifest = {
   name: '__MSG_extensionName__',
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
-  host_permissions: ['https://kinesis.ap-northeast-2.amazonaws.com/*'],
+  host_permissions: ['https://*.lfind.kr/*', 'https://lfind.kr/*', 'https://*.lbox.kr/*', 'https://lbox.kr/*'],
   permissions: ['activeTab', 'webRequest'],
   background: {
     service_worker: 'background.iife.js',
