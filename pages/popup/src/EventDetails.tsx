@@ -14,7 +14,7 @@ export const EventDetails = ({ event }: EventDetailsProps) => {
 
   return (
     <div className="px-[16px] py-[24px] text-center text-zinc-100">
-      <div className="flex items-center gap-x-[16px] mb-[24px]">
+      <div className="flex items-center gap-[16px] flex-wrap mb-[24px]">
         <h3 className="text-[20px] font-bold flex-1">{event.data.event.amplitude.event_type}</h3>
         <label className="flex items-center gap-x-[4px] shrink-0 text-[14px] text-zinc-400 cursor-pointer">
           원본 JSON
@@ -24,6 +24,15 @@ export const EventDetails = ({ event }: EventDetailsProps) => {
 
       {!showRawJSON && (
         <>
+          <h4 className="text-[16px] font-bold mt-[24px] mb-[8px]">이벤트 프로퍼티</h4>
+          <pre className="whitespace-pre-wrap p-[8px] bg-zinc-800 rounded-md">
+            {JSON.stringify(event.data.event.amplitude.event_properties, null, 2)}
+          </pre>
+          <h4 className="text-[16px] font-bold mt-[24px] mb-[8px]">유저 프로퍼티</h4>
+          <pre className="whitespace-pre-wrap p-[8px] bg-zinc-800 rounded-md">
+            {JSON.stringify(event.data.event.amplitude.user_properties, null, 2)}
+          </pre>
+          <h4 className="text-[16px] font-bold mt-[24px] mb-[8px]">공통 프로퍼티</h4>
           <ul className="grid grid-cols-[auto_1fr] gap-x-[12px]">
             {Object.entries(event.data.event.amplitude)
               .filter(([key]) => key !== 'event_properties' && key !== 'user_properties')
@@ -40,14 +49,6 @@ export const EventDetails = ({ event }: EventDetailsProps) => {
                 </li>
               ))}
           </ul>
-          <h4 className="text-[16px] font-bold mt-[24px] mb-[8px]">Event Properties</h4>
-          <pre className="whitespace-pre-wrap">
-            {JSON.stringify(event.data.event.amplitude.event_properties, null, 2)}
-          </pre>
-          <h4 className="text-[16px] font-bold mt-[24px] mb-[8px]">User Properties</h4>
-          <pre className="whitespace-pre-wrap">
-            {JSON.stringify(event.data.event.amplitude.user_properties, null, 2)}
-          </pre>
         </>
       )}
 
